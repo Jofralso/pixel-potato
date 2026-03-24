@@ -1,11 +1,11 @@
-# ── Agent server ──────────────────────
-FROM python:3.12-slim AS agent
+# ── PixelPotato 🥔 Agent Server ──────────────────
+FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git curl nodejs npm grep \
+    git curl ripgrep tree nodejs npm \
     && rm -rf /var/lib/apt/lists/*
 
-# Install MCP filesystem server globally (most common MCP server)
+# Install common MCP servers globally
 RUN npm install -g @modelcontextprotocol/server-filesystem
 
 WORKDIR /app
@@ -15,7 +15,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Default workspace mount point
 RUN mkdir -p /workspace
 
 EXPOSE 8000

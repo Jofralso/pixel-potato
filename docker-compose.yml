@@ -1,14 +1,22 @@
-version: "3.9"
-
 services:
-  # ── Ollama (local LLM) ─────────────────
+  # ── Ollama (local LLM on RTX 5060 Ti) ──────────────
   ollama:
     image: ollama/ollama:latest
-    container_name: local-ai-ollama
+    container_name: pixel-potato-ollama
     ports:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+    environment:
+      # RTX 5060 Ti (16 GB VRAM) — offload all layers to GPU
+      - OLLAMA_NUM_GPU=999
+      - OLLAMA_GPU_OVERHEAD=256000000
+      - OLLAMA_FLASH_ATTENTION=1
+      - OLLAMA_KV_CACHE_TYPE=q8_0
+      - OLLAMA_CONTEXT_LENGTH=32768
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_KEEP_ALIVE=30m
+      - NVIDIA_VISIBLE_DEVICES=all
     deploy:
       resources:
         reservations:
@@ -20,26 +28,26 @@ services:
 
   # ── Model bootstrap ────────────────────
   ollama-init:
-    image: ollama/ollama:latest
-    container_name: local-ai-ollama-init
+    image: curlimages/curl:latest
+    container_name: pixel-potato-ollama-init
     depends_on:
       - ollama
     entrypoint: >
       sh -c "
-        echo 'Waiting for Ollama to be ready...' &&
+        echo '🥔 Waiting for Ollama to be ready...' &&
         until curl -sf http://ollama:11434/api/tags > /dev/null 2>&1; do sleep 2; done &&
-        echo 'Pulling model ${LLM_MODEL:-qwen2.5-coder:14b}...' &&
-        curl -sf http://ollama:11434/api/pull -d '{\"name\":\"${LLM_MODEL:-qwen2.5-coder:14b}\"}' &&
-        echo 'Model ready!'
+        echo '🥔 Pulling model $${LLM_MODEL:-qwen2.5-coder:14b}...' &&
+        curl -sf http://ollama:11434/api/pull -d '{\"name\":\"$${LLM_MODEL:-qwen2.5-coder:14b}\"}' &&
+        echo '🥔 Model ready! Potato is powered up.'
       "
     restart: "no"
 
-  # ── AI Agent server ────────────────────
+  # ── PixelPotato Agent Server ────────────────────
   agent:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: local-ai-agent
+    container_name: pixel-potato-agent
     ports:
       - "${PORT:-8000}:8000"
     volumes:

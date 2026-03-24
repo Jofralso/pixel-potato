@@ -88,7 +88,7 @@ async def websocket_endpoint(ws: WebSocket):
                 if not user_message:
                     continue
 
-                session.add_message("user", user_message)
+                session.add_user(user_message)
 
                 async for event in orchestrator.run(session):
                     await ws.send_json(event)
