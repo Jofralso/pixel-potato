@@ -1,0 +1,14 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+node_modules/
+.git/
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.pytest_cache/
+ollama_data/

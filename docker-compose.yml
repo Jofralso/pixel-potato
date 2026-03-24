@@ -1,0 +1,61 @@
+version: "3.9"
+
+services:
+  # ── Ollama (local LLM) ─────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: local-ai-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  # ── Model bootstrap ────────────────────
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: local-ai-ollama-init
+    depends_on:
+      - ollama
+    entrypoint: >
+      sh -c "
+        echo 'Waiting for Ollama to be ready...' &&
+        until curl -sf http://ollama:11434/api/tags > /dev/null 2>&1; do sleep 2; done &&
+        echo 'Pulling model ${LLM_MODEL:-qwen2.5-coder:14b}...' &&
+        curl -sf http://ollama:11434/api/pull -d '{\"name\":\"${LLM_MODEL:-qwen2.5-coder:14b}\"}' &&
+        echo 'Model ready!'
+      "
+    restart: "no"
+
+  # ── AI Agent server ────────────────────
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: local-ai-agent
+    ports:
+      - "${PORT:-8000}:8000"
+    volumes:
+      - ${WORKSPACE_PATH:-./../workspace}:/workspace
+      - ./config:/app/config
+    environment:
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://ollama:11434}
+      - LLM_MODEL=${LLM_MODEL:-qwen2.5-coder:14b}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - MAX_CLIENTS=${MAX_CLIENTS:-2}
+      - WORKSPACE_DIR=/workspace
+      - MCP_CONFIG_PATH=/app/config/mcp_servers.json
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
