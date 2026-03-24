@@ -1,6 +1,6 @@
 """
-Main FastAPI server with WebSocket support for multi-client AI agent.
-Supports up to 2 concurrent client sessions.
+PixelPotato 🥔 — Main server with WebSocket support.
+A suspiciously productive couch potato. Supports 2 concurrent sessions.
 """
 
 import asyncio
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
     await mcp_registry.shutdown_all()
 
 
-app = FastAPI(title="Local AI Agent", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="PixelPotato 🥔", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

@@ -48,7 +48,7 @@ class MCPClient:
         resp = await self._send_request("initialize", {
             "protocolVersion": "2024-11-05",
             "capabilities": {},
-            "clientInfo": {"name": "local-ai-agent", "version": "1.0.0"},
+            "clientInfo": {"name": "pixelpotato", "version": "1.0.0"},
         })
         # Send initialized notification
         await self._send_notification("notifications/initialized", {})

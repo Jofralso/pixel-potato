@@ -1,30 +1,35 @@
-# Local AI Agent
+# 🥔 PixelPotato
 
-A self-hosted AI coding agent that works like Claude Code — with tool use, MCP server support, and multi-client WebSocket connections. Fully containerized with Docker for one-command deployment.
+**A suspiciously productive couch potato that codes, designs, and handles your UI needs.**
+
+Self-hosted AI agent for your home setup — dev, Figma-to-code, UI/UX, and whatever else you throw at it. Runs locally with Ollama or connects to cloud LLMs. Supports MCP servers, 2 simultaneous clients, and deploys with a single Docker command.
+
+> *"I may look like a potato, but I pixel-push harder than your entire design team."* — PixelPotato
 
 ## Features
 
-- **Claude Code-like agent loop** — LLM ↔ tool execution cycle with file ops, shell commands, and search
-- **MCP server support** — Connect any [Model Context Protocol](https://modelcontextprotocol.io/) server
-- **2 concurrent clients** — WebSocket-based sessions, configurable limit
-- **Multi-LLM backend** — Ollama (default, fully local), OpenAI, or Anthropic
-- **CLI + Web UI** — Terminal client and browser-based chat interface
-- **One-command deploy** — `docker compose up` pulls model + starts everything
+- 🧠 **Agentic tool loop** — LLM ↔ tool execution cycle (read, write, edit, search, shell, MCP)
+- 🔌 **MCP server support** — Plug in any [Model Context Protocol](https://modelcontextprotocol.io/) server
+- 👥 **2 concurrent clients** — Two people can talk to the potato at the same time
+- 🏠 **Fully local option** — Ollama by default, your data never leaves home
+- ☁️ **Cloud LLMs too** — OpenAI or Anthropic if the potato needs a bigger brain
+- 🖥️ **CLI + Web UI** — Terminal for devs, browser for designers
+- 🐳 **One command deploy** — `docker compose up` and the potato is baked and ready
 
 ## Architecture
 
 ```
 ┌──────────────────────────────────────────────────┐
-│                  Docker Compose                   │
+│              Docker Compose (The Oven)            │
 │                                                   │
 │  ┌───────────┐    ┌────────────────────────────┐ │
-│  │  Ollama   │◀──▶│      Agent Server           │ │
-│  │  (LLM)    │    │  ┌──────────┐ ┌──────────┐ │ │
+│  │  Ollama   │◀──▶│    🥔 PixelPotato Server    │ │
+│  │  (Brain)  │    │  ┌──────────┐ ┌──────────┐ │ │
 │  └───────────┘    │  │ Session  │ │  Tools   │ │ │
 │                   │  │ Manager  │ │ (built-in│ │ │
 │  ┌───────────┐    │  │ (max: 2) │ │  + MCP)  │ │ │
-│  │  MCP      │◀──▶│  └──────────┘ └──────────┘ │ │
-│  │  Servers   │    │  ┌──────────────────────┐  │ │
+│  │   MCP     │◀──▶│  └──────────┘ └──────────┘ │ │
+│  │  Servers  │    │  ┌──────────────────────┐  │ │
 │  └───────────┘    │  │  WebSocket Endpoint   │  │ │
 │                   │  └──────────┬───────────┘  │ │
 │                   └─────────────┼──────────────┘ │
@@ -34,7 +39,7 @@ A self-hosted AI coding agent that works like Claude Code — with tool use, MCP
                     │             │             │
                 ┌───▼───┐   ┌───▼───┐   ┌────▼────┐
                 │  CLI  │   │ Web UI│   │ Custom  │
-                │Client │   │Client │   │ Client  │
+                │  🖥️   │   │  🌐   │   │  🔧    │
                 └───────┘   └───────┘   └─────────┘
 ```
 
@@ -43,8 +48,8 @@ A self-hosted AI coding agent that works like Claude Code — with tool use, MCP
 ### 1. Clone & configure
 
 ```bash
-git clone git@github.com:Jofralso/local-ai-agent.git
-cd local-ai-agent
+git clone git@github.com:Jofralso/pixel-potato.git
+cd pixel-potato
 cp .env.example .env
 # Edit .env to your needs
 ```
@@ -56,15 +61,15 @@ docker compose up -d
 ```
 
 This will:
-- Start **Ollama** with GPU support
+- Start **Ollama** with GPU support (the potato needs its brain)
 - Auto-pull the configured model (default: `qwen2.5-coder:14b`)
-- Start the **Agent server** on port 8000
+- Start **PixelPotato** on port 8000
 
-### 3. Connect
+### 3. Talk to the Potato
 
-**Web UI** — Open [http://localhost:8000/ui](http://localhost:8000/ui)
+**Web UI** — Open [http://localhost:8000/ui](http://localhost:8000/ui) 🌐
 
-**CLI client:**
+**CLI (for terminal enjoyers):**
 ```bash
 pip install websockets
 python clients/cli.py
@@ -72,7 +77,7 @@ python clients/cli.py
 python clients/cli.py ws://localhost:8000/ws
 ```
 
-**Health check:**
+**Health check (is the potato alive?):**
 ```bash
 curl http://localhost:8000/health
 ```
@@ -141,7 +146,7 @@ Any MCP-compatible server that uses **stdio transport** will work. The agent dis
 
 ## Built-in Tools
 
-The agent comes with core tools out of the box:
+The potato comes loaded with these out of the box:
 
 | Tool | Description |
 |---|---|
@@ -155,12 +160,12 @@ The agent comes with core tools out of the box:
 
 ## Multi-Client Support
 
-The server accepts up to **2 concurrent WebSocket connections** (configurable via `MAX_CLIENTS`). Each client gets an independent session with its own conversation history. Excess connections are rejected with an error message.
+The potato can talk to **2 people at the same time** (configurable via `MAX_CLIENTS`). Each client gets an independent session with its own conversation history. If a third person tries to connect, the potato politely tells them to wait.
 
 ## Project Structure
 
 ```
-local-ai-agent/
+pixel-potato/
 ├── agent/
 │   ├── server.py          # FastAPI + WebSocket server
 │   ├── orchestrator.py    # Agent loop (LLM ↔ tools)
@@ -177,7 +182,7 @@ local-ai-agent/
 ├── config/
 │   ├── settings.py        # Environment-based config
 │   └── mcp_servers.json   # MCP server definitions
-├── main.py                # Entry point
+├── main.py                # Wake the potato
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
@@ -205,14 +210,29 @@ export MCP_CONFIG_PATH=$PWD/config/mcp_servers.json
 python main.py
 ```
 
-## Without GPU
+## Without GPU (Potato on a Budget)
 
-If you don't have a GPU, remove the `deploy.resources` section from the `ollama` service in `docker-compose.yml` and use a smaller model:
+No GPU? No problem. Remove the `deploy.resources` section from the `ollama` service in `docker-compose.yml` and use a smaller model:
 
 ```env
 LLM_MODEL=qwen2.5-coder:7b
 ```
 
+The potato will be a bit slower but still gets the job done. Like a baked potato vs. a fried one — different vibes, same delicious result.
+
+## What Can the Potato Do?
+
+- 💻 **Dev** — Write code, debug, refactor, run tests, git operations
+- 🎨 **Figma/UI** — Translate designs to code, review UI components, generate CSS/Tailwind
+- 📁 **File ops** — Read, write, search, edit any file in your workspace
+- 🔧 **Shell** — Run any command, install packages, build projects
+- 🔌 **MCP servers** — Extend with GitHub, databases, APIs, whatever you need
+- 🏠 **Fully local** — Your code stays on your machine. The potato doesn't gossip.
+
 ## License
 
 MIT
+
+---
+
+*Made with 🥔 by [Jofralso](https://github.com/Jofralso)*

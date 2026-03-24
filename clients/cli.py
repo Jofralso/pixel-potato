@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Interactive CLI client for the Local AI Agent.
-Connects via WebSocket and provides a Claude Code-like terminal experience.
+PixelPotato 🥔 CLI — talk to your potato from the terminal.
 """
 
 import asyncio
@@ -110,7 +109,7 @@ class AgentCLI:
                     None, lambda: input(f"{GREEN}You:{RESET} ")
                 )
             except (EOFError, KeyboardInterrupt):
-                print(f"\n{DIM}Goodbye!{RESET}")
+                print(f"\n{DIM}🥔 Potato out. See ya!{RESET}")
                 break
 
             user_input = user_input.strip()
@@ -118,7 +117,7 @@ class AgentCLI:
                 continue
 
             if user_input.lower() in ("/quit", "/exit", "/q"):
-                print(f"{DIM}Goodbye!{RESET}")
+                print(f"{DIM}🥔 *rolls off desk* Bye!{RESET}")
                 break
 
             if user_input.lower() == "/cancel":
@@ -136,10 +135,11 @@ def main():
     url = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_URL
 
     print(f"""
-{BOLD}{CYAN}╔══════════════════════════════════════╗
-║       Local AI Agent CLI             ║
-║   Claude Code-like experience        ║
-╚══════════════════════════════════════╝{RESET}
+{BOLD}{CYAN}╔══════════════════════════════════════════════════╗
+║  🥔  PixelPotato                                 ║
+║  A suspiciously productive couch potato          ║
+║  Dev • Figma • UI • Snacks                       ║
+╚══════════════════════════════════════════════════╝{RESET}
 """)
 
     client = AgentCLI(url)

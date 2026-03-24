@@ -13,7 +13,7 @@ HTML_PAGE = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Local AI Agent</title>
+<title>PixelPotato 🥔</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'SF Mono', 'Fira Code', monospace; background: #1a1a2e; color: #e0e0e0; height: 100vh; display: flex; flex-direction: column; }
@@ -37,12 +37,12 @@ HTML_PAGE = """<!DOCTYPE html>
 </head>
 <body>
 <div id="header">
-  <h1>&#x1F916; Local AI Agent</h1>
+  <h1>&#x1F954; PixelPotato</h1>
   <div class="status" id="status">Connecting...</div>
 </div>
 <div id="messages"></div>
 <div id="input-area">
-  <input id="user-input" placeholder="Ask the agent anything..." autocomplete="off" />
+  <input id="user-input" placeholder="Hey potato, help me with..." autocomplete="off" />
   <button id="send-btn" onclick="send()">Send</button>
 </div>
 <script>
@@ -91,7 +91,7 @@ function addMsg(role, text) {
   d.className = 'msg ' + role;
   const label = document.createElement('div');
   label.className = 'label';
-  label.textContent = role === 'user' ? 'You' : role === 'agent' ? 'Agent' : 'Tool';
+  label.textContent = role === 'user' ? 'You' : role === 'agent' ? '🥔 Potato' : 'Tool';
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
   const pre = document.createElement('pre');
