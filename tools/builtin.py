@@ -194,6 +194,76 @@ BUILTIN_TOOLS = [
             "required": ["path"],
         },
     ),
+    ToolDef(
+        name="think",
+        description=(
+            "Use this tool to think through a complex problem step-by-step before acting. "
+            "This is your internal scratchpad — the user won't see the content, but it will "
+            "help you reason through ambiguous requirements, weigh trade-offs, plan multi-step "
+            "changes, or debug tricky issues. Use it generously before complex edits."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "thought": {"type": "string", "description": "Your reasoning / analysis / scratchpad"},
+            },
+            "required": ["thought"],
+        },
+    ),
+    ToolDef(
+        name="plan",
+        description=(
+            "Create or update a structured task plan for complex multi-step work. "
+            "ALWAYS create a plan before starting any task that involves more than 2-3 tool calls. "
+            "Update plan status as you complete each step. The plan is shown to the user for visibility."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["create", "update", "complete"],
+                    "description": "create: new plan, update: change step status, complete: mark plan done",
+                },
+                "title": {"type": "string", "description": "Plan title (required for create)"},
+                "steps": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "integer"},
+                            "title": {"type": "string"},
+                            "status": {"type": "string", "enum": ["pending", "in-progress", "done", "skipped"]},
+                        },
+                    },
+                    "description": "Full list of steps (for create or update)",
+                },
+            },
+            "required": ["action"],
+        },
+    ),
+    ToolDef(
+        name="memory",
+        description=(
+            "Save or retrieve persistent notes across the session. Use this to remember "
+            "important context, decisions made, or things to revisit. The memory persists "
+            "for the entire session (across multiple messages). Useful for tracking "
+            "what you've already done or decisions that should influence later work."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["save", "list", "get", "delete"],
+                    "description": "save: store a note, list: show all keys, get: retrieve by key, delete: remove",
+                },
+                "key": {"type": "string", "description": "Note identifier (for save/get/delete)"},
+                "value": {"type": "string", "description": "Note content (for save)"},
+            },
+            "required": ["action"],
+        },
+    ),
 ]
 
 
@@ -542,3 +612,116 @@ async def _file_info(args: dict) -> str:
         return f"File not found: {args['path']}"
     except Exception as e:
         return f"Error: {e}"
+
+
+# ── Think tool (internal scratchpad) ─────────────────────────
+
+@_register("think")
+async def _think(args: dict) -> str:
+    # The content is stored in the conversation for the LLM to reference later.
+    # It doesn't execute anything — it's purely a reasoning aid.
+    thought = args.get("thought", "")
+    return f"[Thought recorded — {len(thought)} chars]"
+
+
+# ── Plan management ──────────────────────────────────────────
+
+# Plans are stored globally per-process (shared across sessions for simplicity).
+# In production, these would be per-session in a database.
+_PLANS: dict[str, dict] = {}  # session_id -> {title, steps}
+_CURRENT_PLAN_ID: str | None = None
+
+
+def get_current_plan() -> dict | None:
+    """Return the current plan (called by orchestrator to yield plan events)."""
+    if _CURRENT_PLAN_ID and _CURRENT_PLAN_ID in _PLANS:
+        return _PLANS[_CURRENT_PLAN_ID]
+    return None
+
+
+@_register("plan")
+async def _plan(args: dict) -> str:
+    global _CURRENT_PLAN_ID
+    action = args["action"]
+
+    if action == "create":
+        title = args.get("title", "Untitled Plan")
+        steps = args.get("steps", [])
+        plan_id = f"plan_{len(_PLANS) + 1}"
+        _PLANS[plan_id] = {
+            "id": plan_id,
+            "title": title,
+            "steps": steps,
+            "status": "active",
+        }
+        _CURRENT_PLAN_ID = plan_id
+        step_list = "\n".join(
+            f"  {s.get('id', i+1)}. [{s.get('status', 'pending')}] {s.get('title', '?')}"
+            for i, s in enumerate(steps)
+        )
+        return f"✓ Plan created: {title}\n{step_list}"
+
+    elif action == "update":
+        if not _CURRENT_PLAN_ID or _CURRENT_PLAN_ID not in _PLANS:
+            return "Error: No active plan. Use action='create' first."
+        plan = _PLANS[_CURRENT_PLAN_ID]
+        new_steps = args.get("steps", [])
+        if new_steps:
+            plan["steps"] = new_steps
+        step_list = "\n".join(
+            f"  {s.get('id', i+1)}. [{s.get('status', 'pending')}] {s.get('title', '?')}"
+            for i, s in enumerate(plan["steps"])
+        )
+        done = sum(1 for s in plan["steps"] if s.get("status") == "done")
+        total = len(plan["steps"])
+        return f"✓ Plan updated: {plan['title']} ({done}/{total} done)\n{step_list}"
+
+    elif action == "complete":
+        if _CURRENT_PLAN_ID and _CURRENT_PLAN_ID in _PLANS:
+            plan = _PLANS[_CURRENT_PLAN_ID]
+            plan["status"] = "complete"
+            title = plan["title"]
+            _CURRENT_PLAN_ID = None
+            return f"✓ Plan completed: {title}"
+        return "No active plan to complete."
+
+    return f"Unknown plan action: {action}"
+
+
+# ── Session memory (persistent notes) ────────────────────────
+
+_MEMORY: dict[str, str] = {}
+
+
+@_register("memory")
+async def _memory(args: dict) -> str:
+    action = args["action"]
+
+    if action == "save":
+        key = args.get("key", "")
+        value = args.get("value", "")
+        if not key:
+            return "Error: 'key' is required for save"
+        _MEMORY[key] = value
+        return f"✓ Saved note '{key}' ({len(value)} chars)"
+
+    elif action == "list":
+        if not _MEMORY:
+            return "(no notes saved yet)"
+        items = [f"  • {k} ({len(v)} chars)" for k, v in _MEMORY.items()]
+        return f"Session memory ({len(_MEMORY)} notes):\n" + "\n".join(items)
+
+    elif action == "get":
+        key = args.get("key", "")
+        if key in _MEMORY:
+            return f"[{key}]:\n{_MEMORY[key]}"
+        return f"Note '{key}' not found. Use action='list' to see available notes."
+
+    elif action == "delete":
+        key = args.get("key", "")
+        if key in _MEMORY:
+            del _MEMORY[key]
+            return f"✓ Deleted note '{key}'"
+        return f"Note '{key}' not found."
+
+    return f"Unknown memory action: {action}"

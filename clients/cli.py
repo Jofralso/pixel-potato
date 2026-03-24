@@ -92,11 +92,36 @@ class AgentCLI:
             round_str = f" [round {round_num}]" if round_num else ""
             print(f"{DIM}  ● {status}{round_str}{RESET}", flush=True)
 
+        elif etype == "thinking":
+            self._end_streaming()
+            thought = event.get("content", "")
+            print(f"{DIM}{MAGENTA}  💭 {thought}{RESET}", flush=True)
+
+        elif etype == "plan":
+            self._end_streaming()
+            plan = event.get("plan", {})
+            title = plan.get("title", "Plan")
+            steps = plan.get("steps", [])
+            status_sym = {"pending": "○", "in-progress": "◐", "done": "●", "skipped": "⊘"}
+            status_color = {"pending": DIM, "in-progress": YELLOW, "done": GREEN, "skipped": DIM}
+            print(f"\n{BOLD}{MAGENTA}  📋 {title}{RESET}")
+            for s in steps:
+                st = s.get("status", "pending")
+                sym = status_sym.get(st, "○")
+                clr = status_color.get(st, DIM)
+                print(f"  {clr}  {sym} {s.get('title', '?')}{RESET}")
+            print()
+
         elif etype == "tool_call":
             self._end_streaming()
             tool = event.get("tool", "?")
             tool_id = event.get("id", "")[:8]
             args = event.get("arguments", {})
+
+            # Don't show verbose details for think/plan/memory tools
+            if tool in ("think", "plan", "memory"):
+                return  # these have their own events
+
             print(f"\n{YELLOW}  ▶ {tool}{RESET} {DIM}{tool_id}{RESET}")
             for k, v in args.items():
                 val = str(v)
@@ -106,8 +131,11 @@ class AgentCLI:
                 print(f"{DIM}    {k}: {val}{RESET}")
 
         elif etype == "tool_result":
-            result = event.get("result", "")
             tool_name = event.get("tool", "")
+            # Skip display for internal tools (they have their own events)
+            if tool_name in ("think", "plan", "memory"):
+                return
+            result = event.get("result", "")
             lines = result.split("\n")
             # Show compact preview
             max_lines = 8

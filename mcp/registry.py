@@ -6,6 +6,7 @@ Manages launching, connecting to, and calling tools on MCP servers.
 import asyncio
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -54,11 +55,26 @@ class MCPRegistry:
             config = json.load(f)
 
         for name, server_config in config.get("mcpServers", {}).items():
+            # Skip servers with empty required env vars (unconfigured API keys)
+            # Resolve env values: empty string in config means "read from os.environ"
+            raw_env = server_config.get("env", {})
+            env = {}
+            skip = False
+            for key, value in raw_env.items():
+                resolved = value if value else os.environ.get(key, "")
+                env[key] = resolved
+                if not resolved and key.upper().endswith(("_KEY", "_TOKEN", "_SECRET", "_CONNECTION_STRING")):
+                    logger.info(f"MCP server '{name}' skipped — {key} not configured")
+                    skip = True
+                    break
+            if skip:
+                continue
+
             server = MCPServer(
                 name=name,
                 command=server_config["command"],
                 args=server_config.get("args", []),
-                env=server_config.get("env", {}),
+                env=env,
             )
             self.servers[name] = server
             await self._start_server(name)

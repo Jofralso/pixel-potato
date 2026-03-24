@@ -27,6 +27,12 @@ HTML_PAGE = """<!DOCTYPE html>
   .msg.agent .bubble { background: #161b22; border: 1px solid #30363d; border-radius: 12px 12px 12px 0; padding: 10px 14px; white-space: pre-wrap; word-break: break-word; }
   .msg.tool .bubble { background: #0d1117; border-left: 3px solid #d29922; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #8b949e; }
   .msg.status .bubble { background: transparent; color: #484f58; font-size: 12px; padding: 2px 0; }
+  .msg.plan { max-width: 95%; }
+  .plan-bubble { background: #161b22; border: 1px solid #8b5cf6; border-radius: 8px; padding: 12px 16px; }
+  .plan-title { font-weight: 600; color: #c4b5fd; font-size: 14px; margin-bottom: 4px; }
+  .plan-progress { font-size: 11px; color: #484f58; margin-bottom: 8px; }
+  .plan-steps { display: flex; flex-direction: column; gap: 3px; }
+  .plan-step { font-size: 13px; padding: 2px 0; }
   .msg .label { font-size: 11px; color: #484f58; margin-bottom: 3px; }
   pre { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: inherit; }
   code { background: #1c2128; padding: 1px 4px; border-radius: 3px; font-size: 13px; }
@@ -100,14 +106,26 @@ function handleEvent(ev) {
       addMsg('status', ev.message + (ev.round ? ' [round ' + ev.round + ']' : ''));
       break;
 
+    case 'thinking':
+      addMsg('status', '💭 ' + (ev.content || '').slice(0, 150));
+      break;
+
+    case 'plan':
+      currentAgentBubble = null;
+      renderPlan(ev.plan);
+      break;
+
     case 'tool_call':
-      currentAgentBubble = null; // End current text stream
+      currentAgentBubble = null;
+      // Hide internal tools from verbose display
+      if (['think', 'plan', 'memory'].includes(ev.tool)) break;
       const argStr = JSON.stringify(ev.arguments, null, 2);
       const truncated = argStr.length > 300 ? argStr.slice(0, 300) + '...' : argStr;
       addMsg('tool', '▶ ' + ev.tool + '\\n' + truncated);
       break;
 
     case 'tool_result':
+      if (['think', 'plan', 'memory'].includes(ev.tool)) break;
       const result = ev.result || '';
       const lines = result.split('\\n');
       const preview = lines.slice(0, 10).join('\\n') + (lines.length > 10 ? '\\n... (' + (lines.length - 10) + ' more lines)' : '');
@@ -155,6 +173,33 @@ function addMsg(role, text, returnEl) {
   messages.appendChild(d);
   scrollDown();
   if (returnEl) return d;
+}
+
+function renderPlan(plan) {
+  // Remove previous plan display if exists
+  const prev = document.getElementById('plan-display');
+  if (prev) prev.remove();
+
+  const d = document.createElement('div');
+  d.id = 'plan-display';
+  d.className = 'msg plan';
+  const statusIcons = { 'pending': '○', 'in-progress': '◐', 'done': '●', 'skipped': '⊘' };
+  const statusColors = { 'pending': '#484f58', 'in-progress': '#d29922', 'done': '#3fb950', 'skipped': '#484f58' };
+
+  let html = '<div class=\"bubble plan-bubble\"><div class=\"plan-title\">📋 ' + (plan.title || 'Plan') + '</div>';
+  const steps = plan.steps || [];
+  const done = steps.filter(s => s.status === 'done').length;
+  html += '<div class=\"plan-progress\">' + done + '/' + steps.length + ' complete</div>';
+  html += '<div class=\"plan-steps\">';
+  for (const s of steps) {
+    const icon = statusIcons[s.status] || '○';
+    const color = statusColors[s.status] || '#484f58';
+    html += '<div class=\"plan-step\" style=\"color:' + color + '\">' + icon + ' ' + (s.title || '?') + '</div>';
+  }
+  html += '</div></div>';
+  d.innerHTML = html;
+  messages.appendChild(d);
+  scrollDown();
 }
 
 function scrollDown() {

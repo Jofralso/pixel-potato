@@ -6,7 +6,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install common MCP servers globally
-RUN npm install -g @modelcontextprotocol/server-filesystem
+RUN npm install -g \
+    @modelcontextprotocol/server-filesystem \
+    @modelcontextprotocol/server-memory \
+    @modelcontextprotocol/server-fetch \
+    @modelcontextprotocol/server-sequential-thinking \
+    @modelcontextprotocol/server-puppeteer
 
 WORKDIR /app
 

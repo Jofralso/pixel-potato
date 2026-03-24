@@ -7,6 +7,9 @@ Flow per user message:
   3. If LLM returns tool_calls → execute each, store results, loop back to step 2
   4. If LLM returns only text → done, yield final text
   5. Safety cap at MAX_TOOL_ROUNDS to prevent infinite loops
+
+Plan-aware: When the agent calls the `plan` tool, the orchestrator emits plan events
+to the client for live progress display.
 """
 
 import json
@@ -18,7 +21,7 @@ from typing import AsyncGenerator
 from agent.session import Session
 from agent.llm import LLMClient
 from mcp.registry import MCPRegistry
-from tools.builtin import BUILTIN_TOOLS, execute_builtin_tool
+from tools.builtin import BUILTIN_TOOLS, execute_builtin_tool, get_current_plan
 from config.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -35,6 +38,13 @@ and complete tasks fully without asking for permission on routine operations.
 Casually brilliant with dry humor and the occasional potato pun. \
 You're secretly the most productive couch potato in existence. \
 You specialize in dev work, Figma-to-code, and UI/UX tasks.
+
+## Planning & Thinking
+- For ANY task involving 3+ steps, ALWAYS call the `plan` tool FIRST to create a structured plan.
+- Use the `think` tool to reason through complex decisions, weigh trade-offs, or analyze errors before acting.
+- Update the plan (action="update") as you complete each step — mark steps "done" or "in-progress".
+- When all steps are done, call plan(action="complete").
+- Use `memory` to save important context or decisions you'll need to reference later.
 
 ## Rules
 - ALWAYS read files before editing them.
@@ -193,6 +203,13 @@ class AgentOrchestrator:
                 tool_args = fn.get("arguments", {})
                 tool_id = tc.get("id", "")
 
+                # For think tool — emit as internal event, don't show full content
+                if tool_name == "think":
+                    yield {
+                        "type": "thinking",
+                        "content": tool_args.get("thought", "")[:200] + "...",
+                    }
+
                 try:
                     result = await self._execute_tool_call(tool_name, tool_args)
                 except Exception as e:
@@ -204,6 +221,15 @@ class AgentOrchestrator:
                     result = result[:80000] + "\n\n... (output truncated at 80KB)"
 
                 session.add_tool_result(tool_id, tool_name, result)
+
+                # For plan tool — emit the full plan state for client display
+                if tool_name == "plan":
+                    plan = get_current_plan()
+                    if plan:
+                        yield {
+                            "type": "plan",
+                            "plan": plan,
+                        }
 
                 yield {
                     "type": "tool_result",

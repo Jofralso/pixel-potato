@@ -61,6 +61,10 @@ services:
       - MAX_CLIENTS=${MAX_CLIENTS:-2}
       - WORKSPACE_DIR=/workspace
       - MCP_CONFIG_PATH=/app/config/mcp_servers.json
+      # MCP server API keys (optional — servers with empty keys are skipped)
+      - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN:-}
+      - BRAVE_API_KEY=${BRAVE_API_KEY:-}
+      - POSTGRES_CONNECTION_STRING=${POSTGRES_CONNECTION_STRING:-}
     depends_on:
       - ollama
     restart: unless-stopped
