@@ -9,7 +9,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN npm install -g \
     @modelcontextprotocol/server-filesystem \
     @modelcontextprotocol/server-memory \
-    @modelcontextprotocol/server-fetch \
     @modelcontextprotocol/server-sequential-thinking \
     @modelcontextprotocol/server-puppeteer
 

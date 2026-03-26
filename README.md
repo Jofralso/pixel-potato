@@ -84,6 +84,63 @@ curl http://localhost:8000/health
 
 ## Configuration
 
+### LLM Provider Options
+
+**PixelPotato supports 3 LLM backends:**
+
+#### 1. 🏠 **Ollama (Local + Free)** — Default
+
+Runs entirely on your machine. No API fees, no data leaves home.
+
+```bash
+# Default setup—already configured!
+docker compose up
+```
+
+**Pros:** Free, private, fast, offline  
+**Cons:** Needs GPU for good performance, uses local compute  
+**Models:** qwen2.5-coder (14b/7b), llama2, mistral, etc.
+
+---
+
+#### 2. 🧠 **Claude (Anthropic) — Most Capable**
+
+Uses Claude 3.5 Sonnet, the most powerful AI for coding tasks.
+
+```env
+LLM_PROVIDER=anthropic
+LLM_BASE_URL=https://api.anthropic.com
+LLM_MODEL=claude-3-5-sonnet-20241022
+LLM_API_KEY=sk-ant-your-api-key-here
+```
+
+Get your API key from [console.anthropic.com](https://console.anthropic.com)
+
+**Pros:** Most intelligent, handles complex code tasks, works on CPU  
+**Cons:** Costs money (~$0.003 per 1K input tokens, $0.015 per 1K output tokens)  
+**Best for:** Production work, complex projects
+
+---
+
+#### 3. 🤖 **OpenAI (GPT) — Alternative Cloud**
+
+Use GPT-4o or GPT-4 Turbo from OpenAI.
+
+```env
+LLM_PROVIDER=openai
+LLM_BASE_URL=https://api.openai.com
+LLM_MODEL=gpt-4o
+LLM_API_KEY=sk-your-openai-key
+```
+
+Get your API key from [platform.openai.com](https://platform.openai.com/api-keys)
+
+**Pros:** Capable, large ecosystem  
+**Cons:** Costs money, less specialized for building  
+**Best for:** General-purpose AI tasks
+
+---
+
 ### Environment Variables (`.env`)
 
 | Variable | Default | Description |
@@ -96,26 +153,57 @@ curl http://localhost:8000/health
 | `MAX_CLIENTS` | `2` | Max concurrent WebSocket sessions |
 | `WORKSPACE_PATH` | `./../workspace` | Host path mounted as `/workspace` |
 
-### Using OpenAI or Anthropic instead of Ollama
+### Quick Switch: Ollama → Anthropic
 
-```env
-LLM_PROVIDER=openai
-LLM_BASE_URL=https://api.openai.com
-LLM_MODEL=gpt-4o
-LLM_API_KEY=sk-your-key-here
-```
-
-```env
+1. Get your API key: [console.anthropic.com](https://console.anthropic.com)
+2. Update `.env`:
+```bash
 LLM_PROVIDER=anthropic
 LLM_BASE_URL=https://api.anthropic.com
-LLM_MODEL=claude-sonnet-4-20250514
-LLM_API_KEY=sk-ant-your-key-here
+LLM_MODEL=claude-3-5-sonnet-20241022
+LLM_API_KEY=sk-ant-xxxxx
 ```
-
-When using a cloud provider you can skip the Ollama service:
+3. **Skip Ollama (saves resources!):**
 ```bash
 docker compose up agent -d
 ```
+
+That's it! No GPU needed. The potato now uses Claude locally.
+
+---
+
+### Estimated Costs (Claude)
+
+Using Claude Sonnet 3.5 for a typical coding session:
+
+| Task | Tokens | Cost |
+|------|--------|------|
+| Small bugfix (5 exchanges) | ~50K | ~$0.10 |
+| Medium feature (10 exchanges) | ~100K | ~$0.20 |
+| Large project (20 exchanges) | ~200K | ~$0.40 |
+
+**Free tier:** $5/month of API credits (usually covers light usage)  
+**Details:** [Anthropic pricing](https://www.anthropic.com/pricing)
+
+---
+
+## Comparison: Local vs Cloud
+
+| Feature | Ollama Local | Claude (Anthropic) | GPT (OpenAI) |
+|---------|--------------|-------------------|--------------|
+| **Cost** | Free ✅ | ~$0.003-0.02/1K tokens | ~$0.015-0.20/1K tokens |
+| **Speed** | Fast (local) | Fast (API) | Fast (API) |
+| **Privacy** | 100% local ✅ | Sent to Anthropic | Sent to OpenAI |
+| **Intelligence** | Very good | Best (3.5 Sonnet) | Good (GPT-4o) |
+| **GPU needed** | Yes (16GB+) | No | No |
+| **Works offline** | Yes ✅ | No (needs internet) | No (needs internet) |
+| **Setup time** | ~10-20 min | ~2 min | ~2 min |
+| **Coding ability** | Excellent | Excellent (best) | Very good |
+
+**For home projects:** Start with Ollama (free, local).  
+**For professional work:** Switch to Claude (best quality, reasonable cost).
+
+---
 
 ## MCP Servers
 
@@ -162,6 +250,21 @@ The potato comes loaded with these out of the box:
 
 The potato can talk to **2 people at the same time** (configurable via `MAX_CLIENTS`). Each client gets an independent session with its own conversation history. If a third person tries to connect, the potato politely tells them to wait.
 
+## Multi-User & Remote Access
+
+**Another user on your network wants to use the potato?**
+
+```bash
+# On another machine (same network)
+python clients/network_client.py --host 192.168.1.100 --port 8000
+```
+
+📖 **[Client Setup Guide](docs/CLIENT_SETUP.md)** — OS-specific instructions for macOS, Windows, Linux (VSCode, terminal, virtual environments)
+
+📖 **[Multi-User Setup Guide](docs/MULTI_USER.md)** — Detailed setup for teams, Docker networks, SSH tunnels, and RPC integration.
+
+🧠 **[Claude Code Integration](docs/CLAUDE_CODE.md)** — Use Anthropic's Claude 3.5 Sonnet in VS Code with PixelPotato for execution.
+
 ## Project Structure
 
 ```
@@ -177,11 +280,17 @@ pixel-potato/
 ├── tools/
 │   └── builtin.py         # Built-in file/shell tools
 ├── clients/
-│   ├── cli.py             # Terminal CLI client
+│   ├── cli.py             # Local terminal CLI client
+│   ├── network_client.py  # Remote RPC client (same network)
 │   └── web.py             # Browser-based chat UI
+├── docs/
+│   ├── MULTI_USER.md      # Multi-user & network setup guide
+│   └── CLAUDE_CODE.md     # Claude Code (VS Code) integration
 ├── config/
 │   ├── settings.py        # Environment-based config
 │   └── mcp_servers.json   # MCP server definitions
+├── scripts/
+│   └── init-ollama.sh     # Ollama model bootstrap
 ├── main.py                # Wake the potato
 ├── Dockerfile
 ├── docker-compose.yml
@@ -212,13 +321,33 @@ python main.py
 
 ## Without GPU (Potato on a Budget)
 
-No GPU? No problem. Remove the `deploy.resources` section from the `ollama` service in `docker-compose.yml` and use a smaller model:
+### Option 1: Smaller Ollama Model (Still Free, Still Local)
+
+No GPU? Use a smaller quantized model. Still runs, just a bit slower:
 
 ```env
 LLM_MODEL=qwen2.5-coder:7b
 ```
 
-The potato will be a bit slower but still gets the job done. Like a baked potato vs. a fried one — different vibes, same delicious result.
+This fits easily on CPU. Like a baked potato vs. a fried one — different vibes, same delicious result.
+
+### Option 2: Use Claude Instead (No GPU Needed)
+
+Skip GPU entirely and fly to the cloud:
+
+```env
+LLM_PROVIDER=anthropic
+LLM_BASE_URL=https://api.anthropic.com
+LLM_MODEL=claude-3-5-sonnet-20241022
+LLM_API_KEY=sk-ant-xxxxx
+```
+
+Then start without Ollama:
+```bash
+docker compose up agent -d
+```
+
+**Best approach:** Use Claude for coding work (super smart) and save GPU for other tasks.
 
 ## What Can the Potato Do?
 

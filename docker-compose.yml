@@ -32,14 +32,11 @@ services:
     container_name: pixel-potato-ollama-init
     depends_on:
       - ollama
-    entrypoint: >
-      sh -c "
-        echo '🥔 Waiting for Ollama to be ready...' &&
-        until curl -sf http://ollama:11434/api/tags > /dev/null 2>&1; do sleep 2; done &&
-        echo '🥔 Pulling model $${LLM_MODEL:-qwen2.5-coder:14b}...' &&
-        curl -sf http://ollama:11434/api/pull -d '{\"name\":\"$${LLM_MODEL:-qwen2.5-coder:14b}\"}' &&
-        echo '🥔 Model ready! Potato is powered up.'
-      "
+    environment:
+      - LLM_MODEL=qwen2.5-coder:14b
+    volumes:
+      - ./scripts/init-ollama.sh:/init-ollama.sh
+    entrypoint: /bin/sh /init-ollama.sh
     restart: "no"
 
   # ── PixelPotato Agent Server ────────────────────
